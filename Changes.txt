@@ -1,0 +1,17 @@
+Version 1.1
+    ==== CHANGES ====
+        - moved C1 left
+        - enlarged mounting hole to 3.2 mm
+        - turned power input 90° so on left hand edge
+        - using internal pull ups
+        - added separate red/green LEDs
+        - changed to common cathode LED
+        - removed R1, R4, R9
+        
+    ==== RESULTS ====
+
+Version 1.0
+    ==== RESULTS ====
+        - position of C1 / IC1 ambiguous
+        - R8 >> R4 [R4 necessary?]
+        - red LED dominates green
