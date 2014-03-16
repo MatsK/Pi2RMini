@@ -55,11 +55,12 @@
 // Function prototypes
 static void setup(void);
 static void button(void);
+static void reset(void);
 
 // Global variables
 static volatile uint8_t state = 0;
 static volatile uint8_t flash = 0;
-static volatile uint8_t seconds = 0;
+static volatile uint_least16_t seconds = 0;
 
 int main(void)
 {
@@ -73,13 +74,13 @@ int main(void)
     {	
 		if (state & BUTTON) {
 			// disable PCINT while button press is handled
-			PCMSK &= ~(1 << PCINT0);
+			PCMSK &= ~(1<<PCINT0);
 			state &= ~(BUTTON);
 			_delay_ms(50);					// debounce
 			if (!(PINB & PINB0)) {
 				button();
 			}
-			PCMSK |= 1 << PCINT0;
+			PCMSK |= (1<<PCINT0);
 		}
 		
 		// flash red LED if in error state
@@ -94,14 +95,13 @@ int main(void)
 
 static void button(void) {
 	if (state & PI_OFF) {
-		state |= PI_ON;
-		state &= ~(PI_OFF);
+		state = PI_ON;
 		PORTB |= PI_FET;
 		GRN_ON;
 		RED_ON;
 		
-		// wait 20 secs for RPi to start up
-		seconds = 200;
+		// wait 60 secs for RPi to start up
+		seconds = 600;
 		while(PINB & (1<<PI_COMM)) {
 			if (!seconds) {
 				state |= PI_ERROR;
@@ -121,36 +121,38 @@ static void button(void) {
 		while (!(PINB & (1<<PINB0))) {
 			// flash red/green
 			if (!flash) {
-				PORTB ^= LED_G + LED_R;
+				PORTB ^= (LED_G + LED_R);
 				flash = 2;
 			}
 			// time up, reset!
 			if (!seconds) {
-				state |= PI_OFF;
-				state &= ~(PI_ON + PI_ERROR);
-				PORTB &= ~(PI_FET);
-				GRN_OFF;
-				RED_ON;
+				cli();
+				reset();
 				while(!(PINB & (1<<PINB0)));
+				sei();
 				return;
 			}
 		}
 		
 		// don't turn off in error state
-		if (state & PI_ERROR){
+		if (state & PI_ERROR) {
 			RED_ON;
 			GRN_OFF;
 			return;
 		}		
 		
-		// send shutdown signal, wait 4 secs for response
-		DDRB &= ~(1<<DDB1);
-		PORTB &= ~(0x02);
+		// send shutdown signal, wait 10 secs for response
+		RED_ON;
+		GRN_OFF;
+		DDRB |= (1<<DDB1);
+		PORTB |= (1<<PINB1);
 		_delay_ms(1);
-		PORTB |= 1 << 1;
-		DDRB |= 1 << DDB1;
-		seconds = 40;
-		while(PINB & PINB1) {
+		PORTB &= ~(1<<PINB1);
+		_delay_ms(100);
+		DDRB &= ~(1<<DDB1);
+		PORTB |= (1<<PINB1);
+		seconds = 100;
+		while(PINB & (1<<PI_COMM)) {
 			if (!seconds) {
 				RED_ON;
 				GRN_OFF;
@@ -159,18 +161,20 @@ static void button(void) {
 			}
 		}
 		
-		// wait 20 secs, then shutdown
+		// wait 30 secs, then shutdown
 		GRN_ON;
-		RED_ON;
-		seconds = 200;
+		seconds = 300;
 		while(seconds) {}
-		state |= PI_OFF;
-		state &= ~(PI_ON);
-		PORTB &= ~(PI_FET);
-		GRN_OFF;
-		RED_ON;
+		reset();
 		return;
 	}
+}
+
+static void reset(void) {
+	state = PI_OFF;
+	PORTB = LED_R;
+	DDRB = ((1<<DDB2)|(1<<DDB3)|(1<<DDB4));	
+	return;
 }
 
 static void setup(void) {
@@ -191,8 +195,8 @@ static void setup(void) {
 	TCCR0B = 0x05;	
 					
 	// PORTB setup
-	MCUCR |= 0x40;
-	DDRB = 0x1C;	
+	MCUCR |= (1<<PUD);
+	DDRB = ((1<<DDB2)|(1<<DDB3)|(1<<DDB4));	
 
 	sei();
 }

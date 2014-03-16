@@ -6,15 +6,14 @@ PATH=/usr/bin:/home/pi/wiringPi/gpio
 
 echo "Pi2RMini started"
 
-gpio -g mode 7 out
-gpio -g write 7 0
-sudo sleep 0.5
-gpio -g mode 7 in
-gpio -g write 7 0
+gpio mode 7 out
+gpio write 7 0
+sudo sleep 2
+gpio mode 7 in
 
 # wait for falling edge on GPIO 7
-gpio -g wfi 7 falling
-gpio -g mode 7 out
-gpio -g write 7 0
-echo "Pi2RMini has requested a shutdown."
+gpio wfi 7 falling
+gpio mode 7 out
+gpio write 7 0
+echo "Pi2RMini Monitor has acknowledged a shutdown."
 sudo shutdown -h now
